@@ -1,0 +1,78 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+# these computing functions are only toy examples
+computeArticles = function(...) return(45)
+computeComments = function(...) return(126)
+computeSpam = function(...) return(15)
+```
+
+### Articles per Day
+
+```{r}
+articles = computeArticles()
+valueBox(articles, icon = "fa-pencil")
+```
+
+### Comments per Day
+
+```{r}
+comments = computeComments()
+valueBox(comments, icon = "fa-comments")
+```
+
+### Spam per Day
+
+```{r}
+spam = computeSpam()
+valueBox(
+  spam, icon = "fa-trash",
+  color = ifelse(spam > 10, "warning", "primary")
+)
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+library(plotly)
+fig <- plot_ly(
+  x=c("girafas","orangotangos","macacos"),
+  y=c(20,14,23),
+  name="SF Zoo",
+  type="bar"
+)
+
+fig
+
+```
+
+### Chart C
+
+```{r}
+library(plotly)
+a <- c(1:100)
+random_b <- rnorm(100, mean=0)
+data <- data.frame(a, random_b)
+fig2 <- plot_ly(data, a=~a, b=~random_b, type = 'scatter', mode='lines')
+fig2
+
+```
+
