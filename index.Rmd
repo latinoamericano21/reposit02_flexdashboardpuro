@@ -3,8 +3,8 @@ title: "Primeiro Projeto com Flexdashboard" # <= título da  principal do dash b
 output: 
   flexdashboard::flex_dashboard:
     navbar: # barra superior de navegação entre páginas
-    - {title: "Dashboard", align: left}
-    - {title: "Outras informações", align: left}
+    #- {title: "Dashboard", align: left}
+    #- {title: "Outras informações", align: left}
     orientation: columns # <= orientação (columns ou rows)
     vertical_layout: fill # <= preenche a tela (fill) ou expande com barra de rolagem (scroll)
 
@@ -36,9 +36,20 @@ Sidebar {.sidebar data-width=150}
 =====
 ** Esta é a barra lateral para controlar o dashboard
 
-
-Página 00 {data-orientation=rows}
+Página 01 {data-orientation=rows}
 =====
+### Gráfico 0
+```{r}
+source("dados_pop2022.R", local = knitr::knit_global(), echo = FALSE, print.eval = FALSE)
+source("Pop_paises.R", local = knitr::knit_global())
+p
+```
+
+
+Página 02 {data-orientation=rows}
+=====
+### Gráfico 1
+
 ```{r}
 # 1.Instalar os pacotes "httr" e "jsonlite"
 #install.packages("httr")
@@ -102,15 +113,15 @@ pop2022_trat$nro_ord_decresc <- seq(pop2022_trat$Valor) # cria/altera col com n�
 # 5. Gerar gráfico
 
 ### Gráfico de barras ###
-
+x11(width = 4, height = 8) # define largura e altura do gráfico em polegadas
 p <- pop2022_trat %>%
   ggplot(aes(reorder(x = UF, nro_ord_cresc),       # especifica variável eixo x
              y= Valor,
              fill = Valor,
              ))    # especifica variável eixo y
 p <- p + geom_bar(stat = "identity",
-                  fill = "lightblue", # cor do preenchimento das colunas
-                  colour = "slateblue",
+                  fill = "orange", # cor do preenchimento das colunas
+                  colour = "lightskyblue",
                   width = 0.5
                   )   # especifica formato do gráfico
 p <- p + labs(x = "Unidade da Federação",   # rótulo do eixo x
@@ -136,19 +147,24 @@ p <- p + theme(
   plot.subtitle = element_text(hjust = 0.5), # centralizar o subtítulo
   axis.text = element_text(
     size = 10,   # tamanho da fonte dos rótulos dos eixos
-    color = "#222222") #,
+    color = "#222222"),
     # angle = 45)
+  aspect.ratio = 2,
+  panel.grid.major.y = element_blank()
 ) 
 p <- p + coord_flip() # troca os eixos horizontal e vertical
 p
 ```
 
+### Gráfico 2
+
+```{r}
+if(!require(plotly)){install.packages("plotly")};library("plotly")
+ggplotly(p)
+```
 
 
-
-
-
-Página 01
+Página 03
 =====
 Olá, mundo! Este texto é exibido no dashboard acima de todas as colunas ou de todas as linhas. A Fortuna é muito fofinha.
 
@@ -201,7 +217,7 @@ fig2
 
 ```
 
-Página 02 {data-orientation=rows}
+Página 04 {data-orientation=rows}
 =====
 
 Row {data-height = 30}
@@ -254,7 +270,7 @@ kable(list(d1, d2), caption = "A tale of two tables")
 #kable(list(caixa),"html") ERRO
 ```
 
-Página 03 {data-orientation=rows}
+Página 05 {data-orientation=rows}
 =====
 
 Row {data-heigth = 200}

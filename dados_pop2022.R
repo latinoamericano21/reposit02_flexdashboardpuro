@@ -61,6 +61,7 @@ View(pop2022_trat)
 
 ### Gráfico de barras ###
 
+x11(width = 5, height = 8) # define largura e altura do gráfico em polegadas
 p <- pop2022_trat %>%
   ggplot(aes(reorder(x = UF, nro_ord_cresc),       # especifica variável eixo x
              y= Valor,
