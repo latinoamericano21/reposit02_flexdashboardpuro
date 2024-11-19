@@ -1,7 +1,8 @@
 ---
-title: "Primeiro Projeto com Flexdashboard" # <= título da  principal do dash board
+title: "População UFs/BR e Países América do Sul" # <= título da  principal do dash board
 output: 
   flexdashboard::flex_dashboard:
+    theme: readable
     navbar: # barra superior de navegação entre páginas
     #- {title: "Dashboard", align: left}
     #- {title: "Outras informações", align: left}
@@ -24,258 +25,79 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+#incluir aqui pacotes a serem instalados e/ou carregados
 library(flexdashboard)
-## neste bloco vai a parte do script que para todo dashboard ou para vários gráficos e/ou tabelas
-# these computing functions are only toy examples
-computeArticles = function(...) return(45)
-computeComments = function(...) return(126)
-computeSpam = function(...) return(15)
+library(knitr)
+## neste bloco vai a parte do script que serve para todo dashboard ou para vários gráficos e/ou tabelas
 ```
 
 Sidebar {.sidebar data-width=150}
 =====
 ** Esta é a barra lateral para controlar o dashboard
 
-Página 01 {data-orientation=rows}
-=====
-### Gráfico 0
-```{r}
-source("dados_pop2022.R", local = knitr::knit_global(), echo = FALSE, print.eval = FALSE)
-source("Pop_paises.R", local = knitr::knit_global())
-p
-```
 
-
-Página 02 {data-orientation=rows}
+Pg. 01 | UFs do Brasil {data-orientation=rows}
 =====
 ### Gráfico 1
-
 ```{r}
-# 1.Instalar os pacotes "httr" e "jsonlite"
-#install.packages("httr")
-#install.packages("jsonlite")
-#library("httr")   #carrega biblioteca
-#library("jsonlite")   #carrega biblioteca
-if(!require(httr)){install.packages("httr")};library("httr")
-if(!require(jsonlite)){install.packages("jsonlite")};library("jsonlite")
-if(!require(dplyr)){install.packages("dplyr")};library("dplyr")
-if(!require(ggplot2)){install.packages("ggplot2")};library("ggplot2")
-if(!require(tidyverse)){install.packages("tidyverse")};library("tidyverse")
-if(!require(scales)){install.packages("scales")};library("scales")
-#if(!require(ggthemr)){install.packages("ggthemr")};library("ggthemr")
-#####
+# chamar scripts externos
+source("dados_pop2022.R", local = knitr::knit_global(), echo = FALSE, print.eval = FALSE)
 
-# 2. Fazer uma solicitação "GET" [adaptado para acessar dados do IBGE/SIDRA]
-url_da_base_de_dados <- "https://apisidra.ibge.gov.br/values/t/1209/n1/1/n3/all/v/allxp/p/2022/h/y"
-
-pop2022 <-  GET(url_da_base_de_dados)
-#pop2022
-
-pop2022_text <- content(pop2022, "text")
-#pop2022_text
-
-pop2022_json <- fromJSON(pop2022_text, flatten = TRUE)
-#pop2022_json
-
-pop2022_df <- as.data.frame(pop2022_json)
-#View(pop2022_df)
-
-# 2.a - usar a linha 1 como cabeçalho do dataframe
-nomesvar <- as.vector(t(pop2022_df[1,])) # gera um vetor igual a 1ª linha
-colnames(pop2022_df) <- nomesvar  # rename também funciona?
-pop2022_df <- pop2022_df[-1,] # exclui a 1ª linha
-#View(pop2022_df)
-
-# outro modo
-# nomesvar <- pop2022_df |> slice_head(n=1)
-# nomesvar <- as.vector(t(unname(nomesvar)))
-#####
-
-# 3. Selecionar dados
-pop2022_selec <- pop2022_df|>select(
-  "Brasil e Unidade da Federação",
-  "Valor"
-  )
-colnames(pop2022_selec)[1] <- "UF"
-pop2022_selec <- filter(pop2022_selec, UF != "Brasil")
-pop2022_selec$Valor <- as.integer(pop2022_selec$Valor)   # transforma a coluna de dados de string para inteiros
-#View(pop2022_selec)
-#####
-
-# 4. Tratar e ordenar dados
-pop2022_trat <- pop2022_selec # gera cópía do dtfrm com outro nome
-pop2022_trat <- arrange(pop2022_trat, Valor) # reorganiza o dtframe ordem cresc de Valor
-pop2022_trat$nro_ord_cresc <- seq(pop2022_trat$Valor) # cria/altera col com número na sequência crescente
-pop2022_trat <- arrange(pop2022_trat, desc(Valor)) # reorganiza o dtframe ordem decresc de Valor
-pop2022_trat$nro_ord_decresc <- seq(pop2022_trat$Valor) # cria/altera col com número na sequência decrescente
-#View(pop2022_trat)
-
-# 5. Gerar gráfico
-
-### Gráfico de barras ###
-x11(width = 4, height = 8) # define largura e altura do gráfico em polegadas
-p <- pop2022_trat %>%
-  ggplot(aes(reorder(x = UF, nro_ord_cresc),       # especifica variável eixo x
-             y= Valor,
-             fill = Valor,
-             ))    # especifica variável eixo y
-p <- p + geom_bar(stat = "identity",
-                  fill = "orange", # cor do preenchimento das colunas
-                  colour = "lightskyblue",
-                  width = 0.5
-                  )   # especifica formato do gráfico
-p <- p + labs(x = "Unidade da Federação",   # rótulo do eixo x
-              y = "População",
-              title = "População por Unidade da Federação",
-              subtitle = "Censo Demográfico 2022"
-              )   # rótulo do eixo y
-p <- p + geom_text(aes(label = format(Valor, big.mark = ".", decimal.mark = ",")),  # insere rótulos sobre as colunas
-                   hjust = -0.2, # posiciona os rótulos das colunas
-                   size = 3, # tamanho da fonte dos rótulos das colunas
-                   colour = "black",
-                   family = "Latin Modern Sans"
-                   ) # cor dos rótulos das colunas
-#p <- p + scale_y_continuous(labels = label_number())   #eliminar a notação científica no eixo y
-#p <- p + ylim(c(0,65000000))
-p <- p + scale_y_continuous(limits = c(0,55000000), labels = label_comma(big.mark = ".", decimal.mark = ","))
-  # format(Valor, big.mark = ".", decimal.mark = ",", scientific = FALSE))
-p <- p + theme_light()   # modifica o tema do gráfico
-p <- p + theme(
-  text = element_text(family = "Latin Modern Sans"),   # família da fonte geral
-  plot.background = element_rect(fill = "gray90"),   # cor fundo nas margens
-  plot.title = element_text(hjust=0.5), # centralizar o título
-  plot.subtitle = element_text(hjust = 0.5), # centralizar o subtítulo
-  axis.text = element_text(
-    size = 10,   # tamanho da fonte dos rótulos dos eixos
-    color = "#222222"),
-    # angle = 45)
-  aspect.ratio = 2,
-  panel.grid.major.y = element_blank()
-) 
-p <- p + coord_flip() # troca os eixos horizontal e vertical
 p
 ```
 
+### Gráfico 1b
+```{r}
+if(!require(plotly)){install.packages("plotly")};library("plotly")
+ggplotly(p)
+# inserir código acima no script externo e marcar com ##@knitr graf01b
+
+```
+
+
+Pg. 02 | Países da América do Sul {data-orientation=rows}
+=====
 ### Gráfico 2
 
 ```{r}
-if(!require(plotly)){install.packages("plotly")};library("plotly")
+source("Pop_paises.R", local = knitr::knit_global(), echo = FALSE, print.eval = FALSE)
+
+p0
+```
+
+### Gráfico 2b
+
+```{r}
+ggplotly(p0)
+```
+
+
+Pg. 03 | UFs Brasil e Países AmSul {data-orientation=rows}
+=====
+
+### Gráfico 3
+```{r}
+# chamar scripts externos
+#source("dados_pop2022.R", local = knitr::knit_global(), echo = FALSE, print.eval = FALSE)
+#source("Pop_paises.R", local = knitr::knit_global(), echo = FALSE, print.eval = FALSE)
+#p #marcar no script externo com ##@knitr graf03
+p
+```
+
+### Gráfico 3b
+```{r}
+#if(!require(plotly)){install.packages("plotly")};library("plotly")
 ggplotly(p)
 ```
 
 
-Página 03
-=====
-Olá, mundo! Este texto é exibido no dashboard acima de todas as colunas ou de todas as linhas. A Fortuna é muito fofinha.
 
-> Este é um comentário.
-
-
-Column {data-width=350}
------
-
-### Uma tabela
-
-```{r}
-knitr::kable(head(mtcars, 30))
-```
-
-### Chart A
-
-```{r}
-hist(mtcars$mpg)
-```
-
-
-Column {data-width=600}
------
-
-### Chart B
-
-```{r}
-library(plotly)
-fig <- plot_ly(
-  x=c("girafas","orangotangos","macacos"),
-  y=c(20,14,23),
-  name="SF Zoo",
-  type="bar"
-)
-
-fig
-
-```
-
-### Chart C
-
-```{r}
-library(plotly)
-a <- c(1:100)
-random_b <- rnorm(100, mean=0)
-data <- data.frame(a, random_b)
-fig2 <- plot_ly(data, a=~a, b=~random_b, type = 'scatter', mode='lines')
-fig2
-
-```
-
-Página 04 {data-orientation=rows}
-=====
-
-Row {data-height = 30}
------
-### Articles per Day
-
-```{r}
-articles = computeArticles()
-valueBox(articles, icon = "fa-pencil")
-```
-
-### Comments per Day
-
-```{r}
-comments = computeComments()
-valueBox(comments, icon = "fa-comments")
-```
-
-### Spam per Day
-
-```{r}
-spam = computeSpam()
-valueBox(
-  spam, icon = "fa-trash",
-  color = ifelse(spam > 10, "warning", "primary")
-)
-```
-
-Row
------
-### abc
-```{r}
-# library(rmarkdown)
-# fruit|price
-# -----|-----
-# apple|2.05
-"Bola"
-```
-
-Row {data-heigth = 30}
------
-### def
-```{r}
-articles = computeArticles()
-caixa = valueBox(articles, icon = "fa-pencil")
-library(knitr)
-d1 = head(iris)
-d2 = head(mtcars)
-kable(list(d1, d2), caption = "A tale of two tables")
-#kable(list(caixa),"html") ERRO
-```
-
-Página 05 {data-orientation=rows}
+Pg. 04
 =====
 
 Row {data-heigth = 200}
 -----
-```{r}
+```{r eval=FALSE, include=FALSE}
 library(flextable)
 library(data.table)
 library(ggplot2)
@@ -303,103 +125,10 @@ tabela
 
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 #library(callr)
 #rscript("dados_pop2022.R")
 
-# 1.Instalar os pacotes "httr" e "jsonlite"
-#install.packages("httr")
-#install.packages("jsonlite")
-#library("httr")   #carrega biblioteca
-#library("jsonlite")   #carrega biblioteca
-if(!require(httr)){install.packages("httr")};library("httr")
-if(!require(jsonlite)){install.packages("jsonlite")};library("jsonlite")
-if(!require(dplyr)){install.packages("dplyr")};library("dplyr")
-if(!require(ggplot2)){install.packages("ggplot2")};library("ggplot2")
-if(!require(tidyverse)){install.packages("tidyverse")};library("tidyverse")
-if(!require(scales)){install.packages("scales")};library("scales")
-#####
-
-# 2. Fazer uma solicitação "GET" [adaptado para acessar dados do IBGE/SIDRA]
-url_da_base_de_dados <- "https://apisidra.ibge.gov.br/values/t/1209/n1/1/n3/all/v/allxp/p/2022/h/y"
-
-pop2022 <-  GET(url_da_base_de_dados)
-#pop2022
-
-pop2022_text <- content(pop2022, "text")
-#pop2022_text
-
-pop2022_json <- fromJSON(pop2022_text, flatten = TRUE)
-#pop2022_json
-
-pop2022_df <- as.data.frame(pop2022_json)
-#View(pop2022_df)
-
-# 2.a - usar a linha 1 como cabeçalho do dataframe
-nomesvar <- as.vector(t(pop2022_df[1,])) # gera um vetor igual a 1ª linha
-colnames(pop2022_df) <- nomesvar  # rename também funciona?
-pop2022_df <- pop2022_df[-1,] # exclui a 1ª linha
-#View(pop2022_df)
-
-# outro modo
-# nomesvar <- pop2022_df |> slice_head(n=1)
-# nomesvar <- as.vector(t(unname(nomesvar)))
-#####
-
-# 3. Selecionar dados
-pop2022_selec <- pop2022_df|>select(
-  "Brasil e Unidade da Federação",
-  "Valor"
-  )
-colnames(pop2022_selec)[1] <- "UF"
-pop2022_selec <- filter(pop2022_selec, UF != "Brasil")
-pop2022_selec$Valor <- as.integer(pop2022_selec$Valor)   # transforma a coluna de dados de string para inteiros
-#View(pop2022_selec)
-#####
-
-# 4. Tratar e ordenar dados
-pop2022_trat <- pop2022_selec # gera cópía do dtfrm com outro nome
-pop2022_trat <- arrange(pop2022_trat, Valor) # reorganiza o dtframe ordem cresc de Valor
-pop2022_trat$nro_ord_cresc <- seq(pop2022_trat$Valor) # cria/altera col com número na sequência crescente
-pop2022_trat <- arrange(pop2022_trat, desc(Valor)) # reorganiza o dtframe ordem decresc de Valor
-pop2022_trat$nro_ord_decresc <- seq(pop2022_trat$Valor) # cria/altera col com número na sequência decrescente
-#View(pop2022_trat)
-
-# 5. Gerar gráfico
-
-### Gráfico de barras ###
-
-
-p <- pop2022_trat %>%
-  ggplot(aes(reorder(x = UF, nro_ord_cresc),       # especifica variável eixo x
-             y= Valor,
-             fill = Valor))    # especifica variável eixo y
-p <- p + geom_bar(stat = "identity",
-                      fill = "lightblue", # cor do preenchimento das colunas
-                      colour = "slateblue")   # especifica formato do gráfico
-p <- p + labs(x = "Unidade da Federação",   # rótulo do eixo x
-              y = "População",
-              title = "População por Unidade da Federação",
-              subtitle = "Censo Demográfico 2022"
-              )   # rótulo do eixo y
-p <- p + geom_text(aes(label = Valor),  # insere rótulos sobre as colunas
-                   hjust = -0.2, # posiciona os rótulos das colunas
-                   size = 3, # tamanho da fonte dos rótulos das colunas
-                   colour = "black") # cor dos rótulos das colunas
-p <- p + scale_y_continuous(labels = label_number())   #eliminar a notação científica no eixo y
-p <- p + theme_classic()   # modifica o tema do gráfico
-p <- p + theme(
-  text = element_text(family = "Kanit Light"),   # família da fonte geral
-  plot.background = element_rect(fill = "gray85"),   # cor fundo nas margens
-  plot.title = element_text(hjust=0.5), # centralizar o título
-  plot.subtitle = element_text(hjust = 0.5), # centralizar o subtítulo
-  axis.text = element_text(
-    size = 9,   # tamanho da fonte dos rótulos dos eixos
-    color = "#222222") #,
-    # angle = 45)
-) 
-p <- p + coord_flip() # troca os eixos horizontal e vertical
-p
 ```
 
 

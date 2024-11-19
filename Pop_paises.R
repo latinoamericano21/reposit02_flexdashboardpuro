@@ -9,36 +9,27 @@ if(!require(magrittr)){install.packages("magrittr")};library("magrittr")
 if(!require(ggplot2)){install.packages("ggplot2")};library("ggplot2")
 if(!require(scales)){install.packages("scales")};library("scales")
 
-# # 2. Fazer uma solicitação "GET" [adaptado para acessar dados do IBGE/SIDRA]
-# url_da_base_de_dados2 <- "https://statistics.cepal.org/portal/cepalstat/open-data.html?lang=es#/Indicator/get_cepalstat_api_v1_indicator__indicator_id__areas"
-# 
-# pop_teste <-  GET(url_da_base_de_dados2)
-# head(pop_teste)
-# 
-# ### ERROS daqui para baixo
-# pop_teste_text <- content(pop_teste, "text")
-# #pop_teste_text
-# 
-# pop_teste_json <- fromJSON(pop_teste_text, flatten = TRUE)
-# # pop2022_json
-# # 
-# pop_teste_df <- as.data.frame(pop_teste_json)
-# # View(pop2022_df)
-
 
 #####     #####     #####
-# 2B. Fazer uma solicitação "GET" [
+# 2. Fazer uma solicitação ao Data API - UN Data Portal Population Division
 
 # Declares the base url for calling the API
 url_base <- "https://population.un.org/dataportalapi/api/v1"
 
 # busca todos os indicadores em formato de string
-indicadores <- getURL(paste0(url_base,"/indicators")) # concatena url_base e adendo ao endereço
+indicadores <- getURL(paste0(url_base,"/indicators")) # => concatena url_base e adendo ao endereço
 indicadores <- fromJSON(indicadores, flatten = TRUE)
 
 # busca todas as localizações em formato de string
-localizacoes <- getURL(paste0(url_base,"/locations")) # concatena url_base e adendo ao endereço
+localizacoes <- getURL(paste0(url_base,"/locations")) # => concatena url_base e adendo ao endereço
 localizacoes <- fromJSON(localizacoes, flatten = TRUE)
+
+# busca todas os agregados de localizações em formato de string
+agreg_localiz <- getURL(paste0(url_base,"/locationsWithAggregates")) # => concatena url_base e adendo ao endereço
+agreg_localiz <- fromJSON(agreg_localiz, flatten = TRUE)
+# filtra um subconjunto de países
+agreg_localiz <- filter(agreg_localiz, SubRegion=="South America") #Region=="Latin America and the Caribbean")
+
 
 # token de acesso à API recebido por e-mail
 headers = c(
@@ -54,11 +45,14 @@ headers = c(
 # Informar abaixo os indicadores e as localizacoes desejadas para requisitar:
 indic_selec <- 49
 localiz_selec <- "32,68,152"
+#localiz_selec_2 <- toString(as.vector(agreg_localiz$Id)) # este comando sempre separa com vírgula e espaço
+localiz_selec_2 <- paste(as.vector(agreg_localiz$Id), collapse = ",") # similar à linha acima
 ano_inic <- 2022
 ano_final <- 2022
 
 # Update the relative path to search for data on a specific indicator, location, and for specific years
-target <- paste0(url_base, "/data/indicators/",indic_selec,"/locations/", localiz_selec,"/start/",ano_inic,"/end/", ano_final,"?pagingInHeader=false&format=json")
+#target <- paste0(url_base, "/data/indicators/",indic_selec,"/locations/", localiz_selec,"/start/",ano_inic,"/end/", ano_final,"?pagingInHeader=false&format=json")
+target <- paste0(url_base, "/data/indicators/",indic_selec,"/locations/",localiz_selec_2,"/start/",ano_inic,"/end/", ano_final,"?pagingInHeader=false&format=json")
 
 #pop_teste_bd3 <-  GET(target)
 pop_paises_bd3 <- getURL(target, .opts=list(httpheader = headers, followlocation = TRUE))
@@ -105,14 +99,61 @@ ufs_e_paises <- arrange(ufs_e_paises, desc(Populacao)) # reorganiza o dtframe or
 ufs_e_paises$nro_ord_decresc <- seq(ufs_e_paises$Populacao) # cria/altera col com número na sequência decrescente
 
 
-# 5. Gerar gráfico
+# 5. Gerar gráficos
 
-### Gráfico de barras ###
+### 5.1 Gráfico de barras - UFs e Países ###
+
+x11(width = 5, height = 8) # define largura e altura do gráfico em polegadas
+p0 <- ufs_e_paises %>%
+  filter(UF_ou_Pais=="Paises") %>% 
+  ggplot(aes(reorder(x = Local, nro_ord_cresc),       # especifica variável eixo x
+             y= Populacao/1000000,
+             #fill = Populacao,
+             fill = UF_ou_Pais,
+  ))    # especifica variável eixo y
+p0 <- p0 + geom_bar(stat = "identity",
+                  #fill = "lightblue", # cor do preenchimento das colunas
+                  colour = "slateblue",
+                  width = 0.5
+)   # especifica formato do gráfico
+p0 <- p0 + labs(x = "UFs do Brasil e Países",   # rótulo do eixo x
+              y = "População (em milhões de hab.)",
+              title = "População por Unidade da Federação",
+              subtitle = "Ano 2022"
+)   # rótulo do eixo y
+p0 <- p0 + geom_text(aes(label = format(Populacao/1000000, big.mark = ".", decimal.mark = ",", scientific = FALSE, digits = 1)),  # insere rótulos sobre as colunas
+                   hjust = -0.2, # posiciona os rótulos das colunas
+                   size = 3, # tamanho da fonte dos rótulos das colunas
+                   colour = "black",
+                   family = "Latin Modern Sans"
+) # cor dos rótulos das colunas
+#p <- p + scale_y_continuous(labels = label_number())   #eliminar a notação científica no eixo y
+#p <- p + ylim(c(0,65000000))
+p0 <- p0 + scale_y_continuous(limits = c(0,230), labels = label_comma(big.mark = ".", decimal.mark = ",", accuracy = 0.1))
+# format(Valor, big.mark = ".", decimal.mark = ",", scientific = FALSE))
+p0 <- p0 + theme_light()   # modifica o tema do gráfico
+p0 <- p0 + theme(
+  text = element_text(family = "Latin Modern Sans"),   # família da fonte geral
+  plot.background = element_rect(fill = "gray90"),   # cor fundo nas margens
+  plot.title = element_text(hjust=0.5), # centralizar o título
+  plot.subtitle = element_text(hjust = 0.5), # centralizar o subtítulo
+  axis.text = element_text(
+    size = 10,   # tamanho da fonte dos rótulos dos eixos
+    color = "#222222") #,
+  # angle = 45)
+) 
+p0 <- p0 + coord_flip() # troca os eixos horizontal e vertical
+p0
+
+
+
+############################################
+### 5.2 Gráfico de barras - UFs e Países ###
 
 x11(width = 5, height = 8) # define largura e altura do gráfico em polegadas
 p <- ufs_e_paises %>%
   ggplot(aes(reorder(x = Local, nro_ord_cresc),       # especifica variável eixo x
-             y= Populacao,
+             y= Populacao/1000000,
              #fill = Populacao,
              fill = UF_ou_Pais,
   ))    # especifica variável eixo y
@@ -122,11 +163,11 @@ p <- p + geom_bar(stat = "identity",
                   width = 0.5
 )   # especifica formato do gráfico
 p <- p + labs(x = "UFs do Brasil e Países",   # rótulo do eixo x
-              y = "População",
+              y = "População (em milhões de hab.)",
               title = "População por Unidade da Federação",
               subtitle = "Ano 2022"
 )   # rótulo do eixo y
-p <- p + geom_text(aes(label = format(Populacao, big.mark = ".", decimal.mark = ",")),  # insere rótulos sobre as colunas
+p <- p + geom_text(aes(label = format(Populacao/1000000, big.mark = ".", decimal.mark = ",", scientific = FALSE, digits = 1)),  # insere rótulos sobre as colunas
                    hjust = -0.2, # posiciona os rótulos das colunas
                    size = 3, # tamanho da fonte dos rótulos das colunas
                    colour = "black",
@@ -134,7 +175,7 @@ p <- p + geom_text(aes(label = format(Populacao, big.mark = ".", decimal.mark = 
 ) # cor dos rótulos das colunas
 #p <- p + scale_y_continuous(labels = label_number())   #eliminar a notação científica no eixo y
 #p <- p + ylim(c(0,65000000))
-p <- p + scale_y_continuous(limits = c(0,55000000), labels = label_comma(big.mark = ".", decimal.mark = ","))
+p <- p + scale_y_continuous(limits = c(0,230), labels = label_comma(big.mark = ".", decimal.mark = ",", accuracy = 0.1))
 # format(Valor, big.mark = ".", decimal.mark = ",", scientific = FALSE))
 p <- p + theme_light()   # modifica o tema do gráfico
 p <- p + theme(

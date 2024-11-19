@@ -1,3 +1,5 @@
+
+
 # 1.Instalar os pacotes "httr" e "jsonlite"
 #install.packages("httr")
 #install.packages("jsonlite")
@@ -25,13 +27,13 @@ pop2022_json <- fromJSON(pop2022_text, flatten = TRUE)
 pop2022_json
 
 pop2022_df <- as.data.frame(pop2022_json)
-View(pop2022_df)
+#View(pop2022_df)
 
 # 2.a - usar a linha 1 como cabeçalho do dataframe
 nomesvar <- as.vector(t(pop2022_df[1,])) # gera um vetor igual a 1ª linha
 colnames(pop2022_df) <- nomesvar  # rename também funciona?
 pop2022_df <- pop2022_df[-1,] # exclui a 1ª linha
-View(pop2022_df)
+#View(pop2022_df)
 
 # outro modo
 # nomesvar <- pop2022_df |> slice_head(n=1)
@@ -61,23 +63,23 @@ View(pop2022_trat)
 
 ### Gráfico de barras ###
 
-x11(width = 5, height = 8) # define largura e altura do gráfico em polegadas
+#x11(width = 5, height = 8) # define largura e altura do gráfico em polegadas
 p <- pop2022_trat %>%
   ggplot(aes(reorder(x = UF, nro_ord_cresc),       # especifica variável eixo x
-             y= Valor,
+             y= Valor/1000000,
              fill = Valor,
              ))    # especifica variável eixo y
 p <- p + geom_bar(stat = "identity",
-                  fill = "lightblue", # cor do preenchimento das colunas
-                  colour = "slateblue",
+                  fill = "lightblue", # cor do preenchimento das colunas #"orange"
+                  colour = "slateblue", #"lightskyblue"
                   width = 0.5
                   )   # especifica formato do gráfico
 p <- p + labs(x = "Unidade da Federação",   # rótulo do eixo x
-              y = "População",
+              y = "População (em milhões de hab.)",
               title = "População por Unidade da Federação",
               subtitle = "Censo Demográfico 2022"
               )   # rótulo do eixo y
-p <- p + geom_text(aes(label = format(Valor, big.mark = ".", decimal.mark = ",")),  # insere rótulos sobre as colunas
+p <- p + geom_text(aes(label = format(Valor/1000000, big.mark = ".", decimal.mark = ",", digits = 1)),  # insere rótulos sobre as colunas
                    hjust = -0.2, # posiciona os rótulos das colunas
                    size = 3, # tamanho da fonte dos rótulos das colunas
                    colour = "black",
@@ -85,20 +87,24 @@ p <- p + geom_text(aes(label = format(Valor, big.mark = ".", decimal.mark = ",")
                    ) # cor dos rótulos das colunas
 #p <- p + scale_y_continuous(labels = label_number())   #eliminar a notação científica no eixo y
 #p <- p + ylim(c(0,65000000))
-p <- p + scale_y_continuous(limits = c(0,55000000), labels = label_comma(big.mark = ".", decimal.mark = ","))
+p <- p + scale_y_continuous(limits = c(0,55), labels = label_comma(big.mark = ".", decimal.mark = ",", accuracy = 0.1))
   # format(Valor, big.mark = ".", decimal.mark = ",", scientific = FALSE))
+#p <- p + scale_y_continuous(trans = new_transform(transform = Valor/1000000))
 p <- p + theme_light()   # modifica o tema do gráfico
 p <- p + theme(
-  text = element_text(family = "Latin Modern Sans"),   # família da fonte geral
+  text = element_text(family = "Latin Modern Sans"),   # família da fonte geral #"Kanit Light"
   plot.background = element_rect(fill = "gray90"),   # cor fundo nas margens
   plot.title = element_text(hjust=0.5), # centralizar o título
   plot.subtitle = element_text(hjust = 0.5), # centralizar o subtítulo
   axis.text = element_text(
     size = 10,   # tamanho da fonte dos rótulos dos eixos
-    color = "#222222") #,
+    color = "#222222"),
     # angle = 45)
+  aspect.ratio = 3,
+  panel.grid.major.y = element_blank()
 ) 
 p <- p + coord_flip() # troca os eixos horizontal e vertical
+
 p
 
 #g01 <- g01 + scale_fill_brewer() #
